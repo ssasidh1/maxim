@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "gpio.h": "c",
+        "nrfx_example.h": "c",
+        "kernel.h": "c",
+        "*.s": "cpp",
+        "nrfx_log.h": "c",
+        "nrfx_spim.h": "c"
+    }
+}
