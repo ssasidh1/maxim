@@ -78,6 +78,8 @@ union GeneralConfiguration_u CNFG_GEN_r;
 volatile bool ecgIntFlag = false;
 static uint8_t m_tx_buffer[4];
 static uint8_t m_rx_buffer[4];
+static uint8_t txB[1];
+static uint8_t rxB[1];
 uint32_t RtoR, readECGSamples, idx, stat;
 uint8_t ETAG[32];
 uint32_t ecgFIFO;
@@ -99,14 +101,21 @@ void writeRegister(enum Registers_e reg, const uint32_t data)
 	m_tx_buffer[1] = ((0x00FF0000 & data) >> 16);
 	m_tx_buffer[2] = ((0x0000FF00 & data) >> 8);
 	m_tx_buffer[3] = ( 0x000000FF & data);
-	nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TRX(m_tx_buffer, sizeof(m_tx_buffer),
-                                                              m_rx_buffer, sizeof(m_rx_buffer));
+	nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TX(txB, 8);
+                                                              
+                                                            //   nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buffer, sizeof(m_tx_buffer),
+                                                            //   m_rx_buffer, sizeof(m_rx_buffer));
 
-    nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
-	// for(int i =0; i<4; i++)
-    // {
-	// printk("Write received:|%d %4x|\n", m_rx_buffer[i],reg);
-    // }
+    printf("\nwriting %x -> ",data);
+    for(int i =0; i<4; i++)
+    {
+        txB[0] = m_tx_buffer[i];
+        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
+	printk("tx:%x ",m_tx_buffer[i]);
+    }
+    printf("\n---\n");
+    
+	
 }
 
 uint32_t readRegister(enum Registers_e reg)
@@ -122,24 +131,34 @@ uint32_t readRegister(enum Registers_e reg)
     m_rx_buffer[1] = -500;
     m_rx_buffer[2] = -500;
     m_rx_buffer[3] = -500;
-    nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TRX(m_tx_buffer, sizeof(m_tx_buffer),
-                                                              m_rx_buffer, sizeof(m_rx_buffer));
+    nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TX(txB, 8);
 
     nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
-    // if(reg == CNFG_GEN)
-    //printk("rcvd: %x ",m_rx_buffer[0]);  
-	data |= m_rx_buffer[1] << 16;
-    // if(reg == CNFG_GEN)
-    // printk("\ndata: %x 16shifted rcvd: %x\n",data, (m_rx_buffer[1] << 16));  
-    data |= m_rx_buffer[2] << 8;
-    // if(reg == CNFG_GEN)
-    // printk("\ndata: %x 8shifted rcvd: %x %x\n",data, (m_rx_buffer[1] << 8), m_rx_buffer[2]);  
+    printk("\n reading %x %x => ", reg,m_tx_buffer[0] );
+    // for(int i=0; i< 4; i++){
+        txB[0] =((reg << 1) | 1) ;
+        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
 
-    data |= m_rx_buffer[3];
-    // if(reg == CNFG_GEN)
-    // printk("\ndata: %x  rcvd: %x\n",data, m_rx_buffer[3]);  
+      nrfx_spim_xfer_desc_t spim_xfer_desc1 = NRFX_SPIM_XFER_RX(rxB, 8);
+        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc1, 0);
+        printk(" %x ", rxB[0]);
 
-	return data;
+        txB[0] = 0xFF;
+        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc1, 0);
+        printk(" %x ", rxB[0]);
+
+        txB[0] = 0xFF;
+        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc1, 0);
+        printk(" %x  |\n", rxB[0]);
+    // }
+    
+	data |= m_rx_buffer[1] ;
+    data = data << 8;
+    data |= m_rx_buffer[2] ;
+    data = data << 8;
+     data |= m_rx_buffer[3] ;
+     printk(" -> %x\n----\n",data);
+    return data;
 }
 
 
@@ -170,16 +189,39 @@ int32_t readdECG(uint32_t dataIn)
     union ManageInterrupts_u MNG_INT_r;
      union ManageDynamicModes_u MNG_DYN_r;
     union MuxConfiguration_u CNFG_MUX_r;
+void regCheck(){
 
+    // printk(" Freq check %x",);
+     NRFX_SPIM_FREQUENCY_STATIC_CHECK(1, 250000);
+    writeRegister( SW_RST , 0);
+    EN_INT_r.bits.en_eint = 1;              // Enable EINT interrupt
+    EN_INT_r.bits.en_dcloffint = 0; // ak
+    EN_INT_r.bits.en_loint = 0 ;//ak
+    EN_INT_r.bits.en_pllint = 0 ;//ak
+
+    EN_INT_r.bits.en_rrint = 0;             // Enable R-to-R interrupt
+    EN_INT_r.bits.intb_type = 0;            // Open-drain NMOS with internal pullup
+    
+   while ( true ) {
+    writeRegister( EN_INT , EN_INT_r.all);
+   }
+
+    
+    //while(true){
+    readRegister(EN_INT);
+    //}
+    
+    readRegister(INFO);
+}
 void ecg_config() { 
     writeRegister( SW_RST , 0);
     
     // General config register setting
     
     CNFG_GEN_r.bits.en_ecg = 1;     // Enable ECG channel
-    CNFG_GEN_r.bits.rbiasn = 0   ;  // Enable resistive bias on negative input
-    CNFG_GEN_r.bits.rbiasp = 0;     // Enable resistive bias on positive input
-    CNFG_GEN_r.bits.en_rbias = 0;   // Enable resistive bias
+    CNFG_GEN_r.bits.rbiasn = 1   ;  // Enable resistive bias on negative input
+    CNFG_GEN_r.bits.rbiasp = 1;     // Enable resistive bias on positive input
+    CNFG_GEN_r.bits.en_rbias = 1;   // Enable resistive bias
      CNFG_GEN_r.bits.imag = 2;       // Current magnitude = 10nA
     // CNFG_GEN_r.bits.fmstr = 0;
     CNFG_GEN_r.bits.en_dcloff = 0;  // Enable DC lead-off detection   
@@ -220,7 +262,7 @@ void ecg_config() {
     
     EN_INT_r.bits.en_eint = 1;              // Enable EINT interrupt
     EN_INT_r.bits.en_dcloffint = 0; // ak
-    EN_INT_r.bits.en_loint = 1 ;//ak
+    EN_INT_r.bits.en_loint = 0 ;//ak
     EN_INT_r.bits.en_pllint = 1 ;//ak
 
     EN_INT_r.bits.en_rrint = 1;             // Enable R-to-R interrupt
@@ -252,7 +294,7 @@ static struct gpio_callback maxim_intB;
 
 void maxim_interrupt(){
     // ecg_start = k_uptime_get();
-    // printk("\nintterupted\n");
+    printk("\nintterupted\n");
     ecgIntFlag = true; 
     
 }
@@ -280,15 +322,17 @@ int main(void)
                                                               MOSI_PIN,
                                                               MISO_PIN,
                                                               SS_PIN);
-                                                             
+                    spim_config.frequency = 250000;
 
     status1 = nrfx_spim_init(&spim_inst, &spim_config, NULL, NULL);
     NRFX_ASSERT(status1 == NRFX_SUCCESS);
 
     NRFX_ASSERT(status1 == NRFX_SUCCESS);
 
-    ecg_config();
+    // ecg_config();
+  
     configureGPIO();
+    regCheck();
     //printk("MNG_INT_r.all %u\n",MNG_INT_r.all);
     
 
@@ -303,40 +347,16 @@ int main(void)
    int toggle = 0;
     uint32_t arr ;
         int pllCheck =0;
-   
-   
 
-    	
-
-
-    
-//     //  NO_OP          = 0x00,
-//     //     STATUS         = 0x01,
-//     //     EN_INT         = 0x02,
-//     //     EN_INT2        = 0x03,
-//     //     MNGR_INT       = 0x04,
-//     //     MNGR_DYN       = 0x05,
-//     //     SW_RST         = 0x08,
-//     //     SYNCH          = 0x09,
-//     //     FIFO_RST       = 0x0A,
-//     //     INFO           = 0x0F,
-//     //     CNFG_GEN       = 0x10,
-//     //     CNFG_CAL       = 0x12,
-//     //     CNFG_EMUX      = 0x14,
-//     //     CNFG_ECG       = 0x15,
-//     //     CNFG_RTOR1     = 0x1D,
-//     //     CNFG_RTOR2     = 0x1E,
-//     //     ECG_FIFO_BURST = 0x20,
-//     //     ECG_FIFO       = 0x21,
-//     //     RTOR           = 0x25,
     while (  true  ){ 
+        continue;
     uint32_t en_int = readRegister(EN_INT);
     uint32_t rtor = readRegister(CNFG_RTOR1);
     uint32_t mngr_int = readRegister(MNGR_INT);
     uint32_t cnfg_gen = readRegister(CNFG_GEN);
     uint32_t cnfg_ecg = readRegister(CNFG_ECG);
 
-    printk("\n%x EN_INT\n",en_int);
+    printk("\n%x EN_INT  %x all\n",en_int);
     printk("\n%x CNFG_RTOR1\n",rtor);
     printk("\n%x MNGR_INT\n",mngr_int);
     printk("\n%x CNFG_GEN\n",cnfg_gen);
@@ -352,9 +372,10 @@ int main(void)
         printk("\n%x pllint - STATUS %x \n", arr & 256, arr);
             // break;
         }
+        
         else {
                printk(" \n zero\n");
-            break;
+            // break;
          
         }
        
@@ -409,6 +430,7 @@ int main(void)
 
 						ETAG[readECGSamples] = ( ecgFIFO >> 3 ) & ETAG_BITS;  // Isolate ETAG
                       // printk("\necgFIFO %x - %x - %x %d\n", ecgFIFO, (( ecgFIFO >> 3 )), ( ecgFIFO >> 3 ) & ETAG_BITS, ETAG[readECGSamples]);
+                      printk("\nECG - %x Extracted - %x ETAG - %u\n",ecgFIFO, ecgSample[readECGSamples], ETAG[readECGSamples] );
 						
                         readECGSamples++;                                          // Increment sample counter                                          
                         
@@ -439,7 +461,7 @@ int main(void)
 					}
 
                     for( idx = 0; idx < readECGSamples; idx++ ) {
-                          printk("%d|0x%u\n", ecgSample[idx],ETAG[idx]);           
+                         // printk("%d|0x%u\n", ecgSample[idx],ETAG[idx]);           
                         
                         }
 
