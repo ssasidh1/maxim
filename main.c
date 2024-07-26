@@ -80,7 +80,8 @@ static uint8_t m_tx_buffer[4];
 static uint8_t m_rx_buffer[4];
 static uint8_t txB[1];
 static uint8_t rxB[1];
-uint32_t RtoR, readECGSamples, idx, stat;
+uint32_t RtoR, idx, stat;
+
 uint8_t ETAG[32];
 uint32_t ecgFIFO;
 int32_t ecgSample[17];
@@ -101,63 +102,46 @@ void writeRegister(enum Registers_e reg, const uint32_t data)
 	m_tx_buffer[1] = ((0x00FF0000 & data) >> 16);
 	m_tx_buffer[2] = ((0x0000FF00 & data) >> 8);
 	m_tx_buffer[3] = ( 0x000000FF & data);
-	nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TX(txB, 8);
+	//nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buffer, sizeof(m_tx_buffer));
+     nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TRX(m_tx_buffer, sizeof(m_tx_buffer), m_rx_buffer, sizeof(m_rx_buffer));
                                                               
                                                             //   nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TX(m_tx_buffer, sizeof(m_tx_buffer),
                                                             //   m_rx_buffer, sizeof(m_rx_buffer));
 
-    printf("\nwriting %x -> ",data);
-    for(int i =0; i<4; i++)
-    {
-        txB[0] = m_tx_buffer[i];
+   // printf("\nwriting reg %x => D:%x -> tx:%x",reg,data, m_tx_buffer[0] );
+    // for(int i =0; i<4; i++)
+    // {
+    //     txB[0] = m_tx_buffer[i];
         nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
-	printk("tx:%x ",m_tx_buffer[i]);
-    }
-    printf("\n---\n");
+	// printk("tx:%x ",m_tx_buffer[i]);
+    // }
+   // printf("\n---\n");
     
 	
 }
 
 uint32_t readRegister(enum Registers_e reg)
 {
-   // NRFX_LOG_INFO("Inside Read");
+  
     uint32_t data = 0;
 	m_tx_buffer[0] = ((reg << 1) | 1);
     m_tx_buffer[1] = 0;
     m_tx_buffer[2] = 0;
     m_tx_buffer[3] = 0;
 
-    m_rx_buffer[0] = -500;
-    m_rx_buffer[1] = -500;
-    m_rx_buffer[2] = -500;
-    m_rx_buffer[3] = -500;
-    nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TX(txB, 8);
-
+    m_rx_buffer[0] = 7;
+    m_rx_buffer[1] = 7;
+    m_rx_buffer[2] = 7;
+    m_rx_buffer[3] = 7;
+    txB[0] = m_tx_buffer[0];
+    nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TRX(m_tx_buffer, sizeof(m_tx_buffer), m_rx_buffer, sizeof(m_rx_buffer));
     nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
-    printk("\n reading %x %x => ", reg,m_tx_buffer[0] );
-    // for(int i=0; i< 4; i++){
-        txB[0] =((reg << 1) | 1) ;
-        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
-
-      nrfx_spim_xfer_desc_t spim_xfer_desc1 = NRFX_SPIM_XFER_RX(rxB, 8);
-        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc1, 0);
-        printk(" %x ", rxB[0]);
-
-        txB[0] = 0xFF;
-        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc1, 0);
-        printk(" %x ", rxB[0]);
-
-        txB[0] = 0xFF;
-        nrfx_spim_xfer(&spim_inst, &spim_xfer_desc1, 0);
-        printk(" %x  |\n", rxB[0]);
-    // }
-    
 	data |= m_rx_buffer[1] ;
     data = data << 8;
     data |= m_rx_buffer[2] ;
     data = data << 8;
      data |= m_rx_buffer[3] ;
-     printk(" -> %x\n----\n",data);
+     //printk(" -> %x\n----\n",data);
     return data;
 }
 
@@ -192,26 +176,34 @@ int32_t readdECG(uint32_t dataIn)
 void regCheck(){
 
     // printk(" Freq check %x",);
-     NRFX_SPIM_FREQUENCY_STATIC_CHECK(1, 250000);
+     NRFX_SPIM_FREQUENCY_STATIC_CHECK(1, 125000);
     writeRegister( SW_RST , 0);
     EN_INT_r.bits.en_eint = 1;              // Enable EINT interrupt
     EN_INT_r.bits.en_dcloffint = 0; // ak
     EN_INT_r.bits.en_loint = 0 ;//ak
     EN_INT_r.bits.en_pllint = 0 ;//ak
-
+    EN_INT_r.bits.en_fstint = 0;
     EN_INT_r.bits.en_rrint = 0;             // Enable R-to-R interrupt
-    EN_INT_r.bits.intb_type = 0;            // Open-drain NMOS with internal pullup
-    
-   while ( true ) {
+    EN_INT_r.bits.intb_type = 3;            // Open-drain NMOS with internal pullup
+    //CNFG_GEN_r.bits.imag = 2; 
+int i=0;
     writeRegister( EN_INT , EN_INT_r.all);
-   }
+ //writeRegister( CNFG_GEN , CNFG_GEN_r.all);
+
+//    while ( true ) {
+//     printk("\n####reading## \n");
+//     readRegister( EN_INT);
+//     NRFX_EXAMPLE_LOG_PROCESS();
+//     k_msleep(250);
+    
+//    }
 
     
     //while(true){
     readRegister(EN_INT);
     //}
     
-    readRegister(INFO);
+    //readRegister(INFO);
 }
 void ecg_config() { 
     writeRegister( SW_RST , 0);
@@ -250,9 +242,9 @@ void ecg_config() {
         
     //Manage interrupts register setting
     
-    MNG_INT_r.bits.efit = 0b100;//0b10000;          // Assert EINT w/ 4 unread samples
+    MNG_INT_r.bits.efit = 4;//16;//;          // Assert EINT w/ 4 unread samples
     MNG_INT_r.bits.clr_rrint = 0b01;// Clear R-to-R on RTOR reg. read back
-     MNG_INT_r.bits.clr_samp=0;
+     MNG_INT_r.bits.clr_samp= 1;
     writeRegister( MNGR_INT , MNG_INT_r.all);
   
     // printk("MNG_INT_r.all %u\n",MNG_INT_r.all);
@@ -264,7 +256,7 @@ void ecg_config() {
     EN_INT_r.bits.en_dcloffint = 0; // ak
     EN_INT_r.bits.en_loint = 0 ;//ak
     EN_INT_r.bits.en_pllint = 1 ;//ak
-
+EN_INT_r.bits.en_samp = 0;
     EN_INT_r.bits.en_rrint = 1;             // Enable R-to-R interrupt
     EN_INT_r.bits.intb_type = 3;            // Open-drain NMOS with internal pullup
     writeRegister( EN_INT , EN_INT_r.all);
@@ -294,7 +286,7 @@ static struct gpio_callback maxim_intB;
 
 void maxim_interrupt(){
     // ecg_start = k_uptime_get();
-    printk("\nintterupted\n");
+    //printk("\nintterupted\n");
     ecgIntFlag = true; 
     
 }
@@ -322,8 +314,8 @@ int main(void)
                                                               MOSI_PIN,
                                                               MISO_PIN,
                                                               SS_PIN);
-                    spim_config.frequency = 250000;
-
+                    spim_config.frequency = 125000;
+                    spim_config.orc = 0x00;
     status1 = nrfx_spim_init(&spim_inst, &spim_config, NULL, NULL);
     NRFX_ASSERT(status1 == NRFX_SUCCESS);
 
@@ -332,7 +324,8 @@ int main(void)
     // ecg_config();
   
     configureGPIO();
-    regCheck();
+    //regCheck();
+    ecg_config();
     //printk("MNG_INT_r.all %u\n",MNG_INT_r.all);
     
 
@@ -343,44 +336,48 @@ int main(void)
     
     NRFX_EXAMPLE_LOG_PROCESS();
     ecg_start = 0;
-    readECGSamples = 0; 
+   
    int toggle = 0;
     uint32_t arr ;
         int pllCheck =0;
 
-    while (  true  ){ 
-        continue;
+    // while (  true  ){ 
+        
     uint32_t en_int = readRegister(EN_INT);
     uint32_t rtor = readRegister(CNFG_RTOR1);
     uint32_t mngr_int = readRegister(MNGR_INT);
     uint32_t cnfg_gen = readRegister(CNFG_GEN);
     uint32_t cnfg_ecg = readRegister(CNFG_ECG);
 
-    printk("\n%x EN_INT  %x all\n",en_int);
-    printk("\n%x CNFG_RTOR1\n",rtor);
-    printk("\n%x MNGR_INT\n",mngr_int);
-    printk("\n%x CNFG_GEN\n",cnfg_gen);
-    printk("\n%x CNFG_ECG\n",cnfg_ecg);
+    printk("\n%x EN_INT %x \n",en_int, EN_INT_r.all);
+    printk("\n%x CNFG_RTOR1 %x\n",rtor, CNFG_RTOR_r.all);
+    printk("\n%x MNGR_INT %x\n",mngr_int, MNG_INT_r.all);
+    printk("\n%x CNFG_GEN %x\n",cnfg_gen,  CNFG_GEN_r.all);
+    printk("\n%x CNFG_ECG %x\n",cnfg_ecg, CNFG_ECG_r.all);
 
   if(en_int == EN_INT_r.all && rtor == CNFG_RTOR_r.all && mngr_int == MNG_INT_r.all && cnfg_gen == CNFG_GEN_r.all && cnfg_ecg ==  CNFG_ECG_r.all ){
-        break;
+        printk("All registers done");
+        //break;
     }
+
+    while(true){
         arr = readRegister(STATUS );
 
         
         if((arr & 256)){
-        printk("\n%x pllint - STATUS %x \n", arr & 256, arr);
+        printk("\n first test %x pllint - STATUS %x \n", arr & 256, arr);
             // break;
         }
         
         else {
                printk(" \n zero\n");
-            // break;
+            break;
          
         }
+    }
        
          NRFX_EXAMPLE_LOG_PROCESS();
-    } 
+ //   } 
     writeRegister( SYNCH , 0);
    
         
@@ -388,12 +385,14 @@ int main(void)
    
 	while (1) 
 	{
-      
+    //   printk("\n looping \n");
         NRFX_EXAMPLE_LOG_PROCESS();
+
 		if(intB_gpio_pin.port)
 		{
             
-            //printk("ecg %d\n",ecgIntFlag);
+            // printk("\necg %d\n",ecgIntFlag);
+                 
  			if(ecgIntFlag) 
 			{
                 // Samples obtained in 1000 ms
@@ -403,7 +402,7 @@ int main(void)
                 //     ecg_count = 0;
                 //     ecg_start = k_uptime_get();
                 // }
-                readECGSamples=0;
+                uint8_t sampleCount = 0;
 				ecgIntFlag = false;
                
             
@@ -415,66 +414,71 @@ int main(void)
                 // }
 				// NRFX_ASSERT(!cond_bits & DCL_OFF);
                 // NRFX_ASSERT(!cond_bits & DCL_ON);
+
+                   if((cond_bits & 256)){
+          printk("\n%x pllint - STATUS %x \n", cond_bits & 256, cond_bits);
+              }
+
 				if( ( cond_bits & RTOR_STATUS ) == RTOR_STATUS ){           
 					RtoR = readRegister( RTOR ) >>  RTOR_REG_OFFSET;   
 					BPM = 1.0f / ( RtoR * RTOR_LSB_RES / 60.0f );   
                 }  
 				// Check if EINT interrupt asserted
 				if ( ( cond_bits & EINT_STATUS ) == EINT_STATUS ) {  
-
+                    
 					do {
-                        
 						ecgFIFO = readRegister( ECG_FIFO );       // Read FIFO
-                        ecgSample[readECGSamples] = ( ecgFIFO & 0x00FFFFFF ) >> 6;
-                        if( ecgSample[readECGSamples]  & 0x0002FFFF )   ecgSample[readECGSamples] = ecgSample[readECGSamples] | 0xFFFC0000;
+                        ecgSample[sampleCount] = ( ecgFIFO & 0x00FFFFFF ) >> 6;
+                        if( ecgSample[sampleCount]  & 0x0002FFFF )   ecgSample[sampleCount] = ecgSample[sampleCount] | 0xFFFC0000;
 
-						ETAG[readECGSamples] = ( ecgFIFO >> 3 ) & ETAG_BITS;  // Isolate ETAG
-                      // printk("\necgFIFO %x - %x - %x %d\n", ecgFIFO, (( ecgFIFO >> 3 )), ( ecgFIFO >> 3 ) & ETAG_BITS, ETAG[readECGSamples]);
-                      printk("\nECG - %x Extracted - %x ETAG - %u\n",ecgFIFO, ecgSample[readECGSamples], ETAG[readECGSamples] );
-						
-                        readECGSamples++;                                          // Increment sample counter                                          
+						ETAG[sampleCount] = ( ecgFIFO >> 3 ) & ETAG_BITS;  // Isolate ETAG
+                      // printk("\necgFIFO %x - %x - %x %d\n", ecgFIFO, (( ecgFIFO >> 3 )), ( ecgFIFO >> 3 ) & ETAG_BITS, ETAG[sampleCount]);
+                    //  printk("\nECG - %x Extracted - %x ETAG - %u\n",ecgFIFO, ecgSample[sampleCount], ETAG[sampleCount] );
+						// printk("\n%x -> %x|0x%u %u\n", ecgFIFO, ecgSample[sampleCount],ETAG[sampleCount] , sampleCount);
+                        printk("\n%d", ecgSample[sampleCount]  );
+                        sampleCount++;                                          // Increment sample counter                                          
                         
                         ecg_count++;
-                     
-                        if(readECGSamples >= 32){
-                            //printk("\nFifo overflow\n");
+                    //  printk("\nFifo overflow check  %u\n",  sampleCount);
+                    //   NRFX_EXAMPLE_LOG_PROCESS();
+                        if(sampleCount > 32){
+                            printk("\nFifo overflow %u\n",  sampleCount);
+                            //  NRFX_EXAMPLE_LOG_PROCESS();
                             break;
                         }
-                        if(ecg_count%513 == 0){
-                             toggle = ~toggle;
-                             gpio_pin_set_dt(&intB_gpio_pin_time, toggle);
-                             
-                        }
-                    
-                    
-                        // if( !(ETAG[readECGSamples-1] == FIFO_VALID_SAMPLE || 
-						// 	ETAG[readECGSamples-1] == FIFO_FAST_SAMPLE )){
-                        //         printk("\n last sample %d\n", readECGSamples -1 );
-                        //     }
-
-					} while ( ETAG[readECGSamples-1] == FIFO_VALID_SAMPLE || 
-							ETAG[readECGSamples-1] == FIFO_FAST_SAMPLE); 
-                    //   printk("\n size : %d\n", readECGSamples);
-					if( ETAG[readECGSamples - 1] == FIFO_OVF ){    
+                       
+       
+					} while ( ETAG[sampleCount-1] == FIFO_VALID_SAMPLE || 
+							ETAG[sampleCount-1] == FIFO_FAST_SAMPLE); 
+                    //   printk("\n size : %d\n", sampleCount);
+                    // printk("\n ecg read %u \n",sampleCount);
+					if( ETAG[sampleCount - 1] == FIFO_OVF ){    
                          printk("\n writing FIFO RST \n");              
 						writeRegister( FIFO_RST , 0); // Reset FIFO
+                    
 					}
 
-                    for( idx = 0; idx < readECGSamples; idx++ ) {
-                         // printk("%d|0x%u\n", ecgSample[idx],ETAG[idx]);           
+                    // for( idx = 0; idx < sampleCount; idx++ ) {
+                    //     //   printk("%d|0x%u\n", ecgSample[idx],ETAG[idx]);           
                         
-                        }
+                    //     }
 
-                    if( ETAG[readECGSamples - 1] == FIFO_EMPTY ){
-                        //  printk("\n  FIFO empty/invalid \n");
+                    if( ETAG[sampleCount - 1] == FIFO_EMPTY ){
+                         printk("\n  FIFO empty/invalid \n");
                     }
 
                    
                   
 					
 				}
+               
+               
         	}
+            //  printk("\n ENDIF\n");
+            //  NRFX_EXAMPLE_LOG_PROCESS();
 		}
-          NRFX_EXAMPLE_LOG_PROCESS();
+        // else printk("\n port error\nn");
+          
     }
+    printk("\n while broken \n");
 }
