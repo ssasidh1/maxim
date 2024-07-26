@@ -365,7 +365,7 @@ int main(void)
 
         
         if((arr & 256)){
-        printk("\n first test %x pllint - STATUS %x \n", arr & 256, arr);
+        printk("\n PLL Interrupt - pre SYNCH \n");
             // break;
         }
         
@@ -416,7 +416,7 @@ int main(void)
                 // NRFX_ASSERT(!cond_bits & DCL_ON);
 
                    if((cond_bits & 256)){
-          printk("\n%x pllint - STATUS %x \n", cond_bits & 256, cond_bits);
+          printk("\nPLL Interrupt\n");
               }
 
 				if( ( cond_bits & RTOR_STATUS ) == RTOR_STATUS ){           
@@ -433,9 +433,9 @@ int main(void)
 
 						ETAG[sampleCount] = ( ecgFIFO >> 3 ) & ETAG_BITS;  // Isolate ETAG
                       // printk("\necgFIFO %x - %x - %x %d\n", ecgFIFO, (( ecgFIFO >> 3 )), ( ecgFIFO >> 3 ) & ETAG_BITS, ETAG[sampleCount]);
-                    //  printk("\nECG - %x Extracted - %x ETAG - %u\n",ecgFIFO, ecgSample[sampleCount], ETAG[sampleCount] );
+                     printk("\nuint32 fifo %x 18bits ECG - %x ETAG - %u\n",ecgFIFO, ecgSample[sampleCount], ETAG[sampleCount] );
 						// printk("\n%x -> %x|0x%u %u\n", ecgFIFO, ecgSample[sampleCount],ETAG[sampleCount] , sampleCount);
-                        printk("\n%d", ecgSample[sampleCount]  );
+                        // printk("\n%d", ecgSample[sampleCount]  );
                         sampleCount++;                                          // Increment sample counter                                          
                         
                         ecg_count++;
