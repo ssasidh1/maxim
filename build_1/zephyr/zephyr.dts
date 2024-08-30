@@ -139,7 +139,7 @@
 			interrupts = < 0x3 0x1 >;
 			max-frequency = < 0x7a1200 >;
 			easydma-maxcnt-bits = < 0x8 >;
-			status = "disabled";
+			status = "okay";
 			pinctrl-0 = < &spi0_default >;
 			pinctrl-1 = < &spi0_sleep >;
 			pinctrl-names = "default", "sleep";
@@ -523,13 +523,13 @@
 		spi1_default: spi1_default {
 			phandle = < 0xa >;
 			group1 {
-				psels = < 0x40004 >, < 0x50003 >, < 0x6001f >;
+				psels = < 0x40004 >, < 0x50006 >, < 0x60007 >;
 			};
 		};
 		spi1_sleep: spi1_sleep {
 			phandle = < 0xb >;
 			group1 {
-				psels = < 0x40004 >, < 0x50003 >, < 0x6001f >;
+				psels = < 0x40004 >, < 0x50006 >, < 0x60007 >;
 				low-power-enable;
 			};
 		};
@@ -667,8 +667,16 @@
 			label = " csutom pin 2";
 		};
 		gpiocust2: gpio_2 {
-			gpios = < &gpio0 0x1c 0x20 >;
+			gpios = < &gpio0 0x1c 0x11 >;
 			label = " csutom pin 28";
+		};
+		gpiocust3: gpio_3 {
+			gpios = < &gpio0 0x3 0x10 >;
+			label = " MOSI";
+		};
+		gpiocust4: gpio_4 {
+			gpios = < &gpio0 0x1f 0x10 >;
+			label = " MISO";
 		};
 	};
 };

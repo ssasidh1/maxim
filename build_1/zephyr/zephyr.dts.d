@@ -26,4 +26,6 @@ empty_file.o: C:/ncs/v2.6.1/zephyr/misc/empty_file.c \
  C:/ncs/v2.6.1/zephyr/dts/arm/nordic/override.dtsi \
  C:/ncs/v2.6.1/zephyr/boards/arm/nrf52dk_nrf52832/nrf52dk_nrf52832-pinctrl.dtsi \
  C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay \
- c:\ncs\v2.6.1\modules\hal\nordic\nrfx\samples\common\common-pinctrl.dtsi
+ c:\ncs\v2.6.1\modules\hal\nordic\nrfx\samples\common\common-pinctrl.dtsi \
+ ../boards/nrf52dk_nrf52832.overlay \
+ ../boards/../../../common/common-pinctrl.dtsi

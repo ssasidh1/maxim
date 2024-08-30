@@ -51,7 +51,7 @@ CACHED_BOARD:STRING=nrf52dk_nrf52832
 // listed, e.g. CONF_FILE="prj1.conf;prj2.conf" The CACHED_CONF_FILE
 // is internal Zephyr variable used between CMake runs. To change
 // CONF_FILE, use the CONF_FILE variable.
-CACHED_CONF_FILE:STRING=C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/common/common.conf;C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/prj.conf
+CACHED_CONF_FILE:STRING=c:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/prj.conf
 
 //Selected shield
 CACHED_SHIELD:STRING=
@@ -317,6 +317,9 @@ DTC:FILEPATH=C:/ncs/toolchains/cf2149caf2/opt/bin/dtc.exe
 // board's .dts file. Multiple files may be listed, e.g. DTC_OVERLAY_FILE="dts1.overlay
 // dts2.overlay"
 DTC_OVERLAY_FILE:STRING=C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay
+
+//No help, variable specified on the command line.
+EXTRA_DTC_OVERLAY_FILE:UNINITIALIZED=../boards/nrf52dk_nrf52832.overlay
 
 //Linker BFD compatibility (compiler reported)
 GNULD_LINKER_IS_BFD:BOOL=ON
