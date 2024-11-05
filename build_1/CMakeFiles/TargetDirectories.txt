@@ -103,8 +103,6 @@ C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zep
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/ipc/CMakeFiles/rebuild_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/logging/CMakeFiles/edit_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/logging/CMakeFiles/rebuild_cache.dir
-C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/logging/backends/CMakeFiles/edit_cache.dir
-C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/logging/backends/CMakeFiles/rebuild_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/mem_mgmt/CMakeFiles/edit_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/mem_mgmt/CMakeFiles/rebuild_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/zephyr/subsys/mgmt/CMakeFiles/edit_cache.dir
@@ -230,8 +228,6 @@ C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/mod
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/controller/CMakeFiles/edit_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/controller/CMakeFiles/..__nrf__subsys__bluetooth__controller.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/controller/CMakeFiles/rebuild_cache.dir
-C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/services/CMakeFiles/edit_cache.dir
-C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/services/CMakeFiles/rebuild_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/host_extensions/CMakeFiles/edit_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/host_extensions/CMakeFiles/rebuild_cache.dir
 C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/net/CMakeFiles/edit_cache.dir

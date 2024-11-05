@@ -523,13 +523,13 @@
 		spi1_default: spi1_default {
 			phandle = < 0xa >;
 			group1 {
-				psels = < 0x40004 >, < 0x50006 >, < 0x60007 >;
+				psels = < 0x4001f >, < 0x5001e >, < 0x6001d >;
 			};
 		};
 		spi1_sleep: spi1_sleep {
 			phandle = < 0xb >;
 			group1 {
-				psels = < 0x40004 >, < 0x50006 >, < 0x60007 >;
+				psels = < 0x4001f >, < 0x5001e >, < 0x6001d >;
 				low-power-enable;
 			};
 		};
@@ -669,14 +669,6 @@
 		gpiocust2: gpio_2 {
 			gpios = < &gpio0 0x1c 0x11 >;
 			label = " csutom pin 28";
-		};
-		gpiocust3: gpio_3 {
-			gpios = < &gpio0 0x3 0x10 >;
-			label = " MOSI";
-		};
-		gpiocust4: gpio_4 {
-			gpios = < &gpio0 0x1f 0x10 >;
-			label = " MISO";
 		};
 	};
 };

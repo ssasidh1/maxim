@@ -1039,17 +1039,7 @@ arduino_spi: &spi2 {
             gpios = <&gpio0 28 ( (1 << 0) | (1 << 4))>;
             label = " csutom pin 28";
         };
-
-  gpiocust3: gpio_3 {
-            gpios = <&gpio0 3 ( (1 << 4))>;
-            label = " MOSI";
-        };
-  gpiocust4: gpio_4 {
-            gpios = <&gpio0 31 ( (1 << 4))>;
-            label = " MISO";
-        };
-
-
+# 27 "C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay"
      };
 };
 
@@ -1065,22 +1055,7 @@ arduino_spi: &spi2 {
 };
 
 &pinctrl {
- spi1_default: spi1_default {
-  group1 {
-    psels = <((((((0) * 32U) + (4)) & 0x7FU) << 0U) | ((4U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (6)) & 0x7FU) << 0U) | ((5U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (7)) & 0x7FU) << 0U) | ((6U & 0xFFFFU) << 16U))>;
-  };
- };
-
- spi1_sleep: spi1_sleep {
-  group1 {
-    psels = <((((((0) * 32U) + (4)) & 0x7FU) << 0U) | ((4U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (6)) & 0x7FU) << 0U) | ((5U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (7)) & 0x7FU) << 0U) | ((6U & 0xFFFFU) << 16U))>;
-    low-power-enable;
-  };
- };
+# 58 "C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay"
 };
 # 0 "<command-line>" 2
 # 1 "./../boards/nrf52dk_nrf52832.overlay" 1
@@ -1140,17 +1115,7 @@ arduino_spi: &spi2 {
             gpios = <&gpio0 28 ( (1 << 0) | (1 << 4))>;
             label = " csutom pin 28";
         };
-
-  gpiocust3: gpio_3 {
-            gpios = <&gpio0 3 ( (1 << 4))>;
-            label = " MOSI";
-        };
-  gpiocust4: gpio_4 {
-            gpios = <&gpio0 31 ( (1 << 4))>;
-            label = " MISO";
-        };
-
-
+# 27 "./../boards/nrf52dk_nrf52832.overlay"
      };
 };
 
@@ -1166,22 +1131,7 @@ arduino_spi: &spi2 {
 };
 
 &pinctrl {
- spi1_default: spi1_default {
-  group1 {
-    psels = <((((((0) * 32U) + (4)) & 0x7FU) << 0U) | ((4U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (6)) & 0x7FU) << 0U) | ((5U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (7)) & 0x7FU) << 0U) | ((6U & 0xFFFFU) << 16U))>;
-  };
- };
-
- spi1_sleep: spi1_sleep {
-  group1 {
-    psels = <((((((0) * 32U) + (4)) & 0x7FU) << 0U) | ((4U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (6)) & 0x7FU) << 0U) | ((5U & 0xFFFFU) << 16U))>,
-      <((((((0) * 32U) + (7)) & 0x7FU) << 0U) | ((6U & 0xFFFFU) << 16U))>;
-    low-power-enable;
-  };
- };
+# 58 "./../boards/nrf52dk_nrf52832.overlay"
 };
 # 0 "<command-line>" 2
 # 1 "C:/ncs/v2.6.1/zephyr/misc/empty_file.c"

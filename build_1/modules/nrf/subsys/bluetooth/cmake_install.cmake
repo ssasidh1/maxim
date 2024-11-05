@@ -44,11 +44,6 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/services/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
   include("C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/blocking/build_1/modules/nrf/subsys/bluetooth/host_extensions/cmake_install.cmake")
 endif()
 
