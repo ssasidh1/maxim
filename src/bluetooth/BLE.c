@@ -3,11 +3,9 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
 /** @file
  *  @brief LED Button Service (LBS) sample
  */
-
 #include <zephyr/types.h>
 #include <stddef.h>
 #include <string.h>
@@ -17,15 +15,12 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/kernel.h>
 #include <hal/nrf_saadc.h>
-
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
-
 #include <bluetooth/BLE.h>
-
 #include <zephyr/logging/log.h>
 volatile int cN =0;
 
@@ -113,7 +108,18 @@ BT_GATT_PRIMARY_SERVICE(BT_UUID_LBS),
 			       BT_GATT_PERM_READ, NULL, NULL, NULL),
 #endif
 	BT_GATT_CCC(lbslc_ccc_cfg_changed,
-		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),		
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),	
+			BT_GATT_CHARACTERISTIC(BT_UUID_HR,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_READ, NULL, NULL, NULL),	
+				   	BT_GATT_CCC(lbslc_ccc_cfg_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+			BT_GATT_CHARACTERISTIC(BT_UUID_HRV,
+			BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+			      BT_GATT_PERM_READ,
+			       NULL, NULL, NULL),
+			BT_GATT_CCC(lbslc_ccc_cfg_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
 
 int bt_lbs_init(struct bt_lbs_cb *callbacks)
@@ -126,6 +132,23 @@ int bt_lbs_init(struct bt_lbs_cb *callbacks)
 	return 0;
 }
  
+
+int notifyHR(int16_t my_data[], uint8_t n){
+     uint8_t readSamples = n * 2;
+	 uint8_t arr[readSamples];
+    //  printk("ECG notified");
+    for(int i = 0; i< n ; i++){
+		arr[i * 2] = (my_data[i]) >> 8;
+		arr[2 * i + 1] =(my_data[i] );
+        // int16_t r = (arr[i * 2]) ;
+        // r = r << 8;
+        // r = r | arr[i* 2 + 1];
+        // printk("%6d - %6d\n",my_data[i], r);           
+    }
+	 return bt_gatt_notify(NULL, &lbs_svc.attrs[5],
+			     arr,
+			      readSamples * sizeof(uint8_t));
+}
 
 int notifyECG(int16_t my_data[], uint8_t n){
      uint8_t readSamples = n * 2;
@@ -144,3 +167,9 @@ int notifyECG(int16_t my_data[], uint8_t n){
 			      readSamples * sizeof(uint8_t));
 }
 
+int notifyHRV(uint8_t my_data[]){
+	
+	 return bt_gatt_notify(NULL, &lbs_svc.attrs[8],
+			     my_data,
+			      10 * sizeof(uint8_t));
+}

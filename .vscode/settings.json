@@ -13,6 +13,7 @@
         "stdlib.h": "c",
         "*.ipp": "cpp",
         "cstdint": "cpp",
-        "*.pat": "cpp"
+        "*.pat": "cpp",
+        "nrfx_rtc.h": "c"
     }
 }

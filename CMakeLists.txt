@@ -20,6 +20,6 @@ src/main.c
 src/bluetooth/BLE.c
 src/includes/MAX30003.h)
 # target_compile_options(-w)
-# add_definitions(-w)
+add_definitions(-w)
 target_include_directories(app PRIVATE ./common)
 

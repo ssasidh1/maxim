@@ -31,6 +31,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <zephyr/kernel.h>
+// #include <zephyr/irq.h>
+
 #include <nrfx_example.h>
 #include <nrfx_spim.h>
 #include <zephyr/drivers/gpio.h>
@@ -45,7 +47,772 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <bluetooth/BLE.h>
+#include <nrfx_rtc.h>
+#include <nrfx_timer.h>
 // #include <zephyr/sys/printk.h>
+//-- ECG IMPORTS FROM NORDIC VERSION ---
+/* STEP 4.1 - Define the SAADC sample interval in microseconds */
+#define SAADC_SAMPLE_INTERVAL_US 2500
+//RING_BUF_DECLARE(my_ring_buf, MY_RING_BUF_WORDS);
+/* STEP 5.1 - Define the buffer size for the SAADC */
+#define SAADC_BUFFER_SIZE   10
+#define RESOLUTION NRF_SAADC_RESOLUTION_12BIT
+#define STACKSIZE 1024
+#define THREAD_HR 4
+#define THREAD_HRV 3
+uint32_t volatile countSAADC = 0, countLoop = 0, ctick=0, cInt = 0,hrv_set=0;
+/* STEP 4.2 - Declaring an instance of nrfx_timer for TIMER2. */
+//const nrfx_rtc_t timer_instance = NRFX_RTC_INSTANCE(2);
+
+/* STEP 5.2 - Declare the buffers for the SAADC */
+// static nrf_saadc_value_t saadc_sample_buffer[2][SAADC_BUFFER_SIZE];
+//volatile uint16_t saadc_sample_buffer[2][SAADC_BUFFER_SIZE];
+//struct k_sem hrv;
+//K_SEM_DEFINE(hrv,0,1);
+
+/* STEP 5.3 - Declare variable used to keep track of which buffer was last assigned to the SAADC driver */
+static uint32_t saadc_current_buffer = 0;
+timing_t start_time, end_time,start_time_tick,end_time_tick, start_time_int,end_time_int,mainLoop, endLoop ;
+    uint64_t total_cycles;
+    uint64_t total_ns;
+	   uint64_t total_cycles_int;
+    uint64_t total_ns_int;
+	   uint64_t total_cycles_tick;
+    uint64_t total_ns_tick;
+	uint64_t t1;
+	uint64_t t2;
+  #define SIMPLEPROFILE_CHAR3_LEN 20
+#define SIMPLEPROFILE_CHAR1_LEN 10
+#define SIMPLEPROFILE_CHAR2_LEN 4
+#define SIMPLEPROFILE_CHAR4_LEN 1
+#define SIMPLEPROFILE_CHAR5_LEN 3
+
+static int tempTrigCount = 0;
+static void resetAll(void);
+
+#define PEAK_BUFFER_SIZE 2//64
+#define ECG_BUFFER_SIZE 2048
+
+#define RISING_SLP  1
+#define FALLING_SLP -1
+#define DEFAULT_SLP 0
+
+#define NUM_HR_VARS 10 //in terms of bytes, each var is converted from uint16_t to uint8_t
+#define NNint_BUF_SIZE 600//1200 //in Bytes (uint8_t)
+
+#define NORMALISE_CONSTANT  1000//350
+#define HR_VAR_PKT_HEADER   7
+
+static int slope =DEFAULT_SLP;
+
+    
+
+static struct peaks {
+    uint16_t peakVal;
+    uint16_t position;
+}peakBuff[PEAK_BUFFER_SIZE];//8];//PEAK_BUFFER_SIZE];
+/*
+static struct altBuff {
+    uint16_t ecgVal;
+    uint16_t position;
+}adcBuff_alt[512];//2048];
+*/
+static void SleepyTime(uint8_t);
+static uint16_t adcBuff[ECG_BUFFER_SIZE];//2560];//3072];//2048];//1536];//2*SCIF_ADC_DATA_STREAMER_BUFFER_SIZE];//SCIF_ADC_DATA_LOGGER_BUFFER_SIZE];
+static uint8_t TX_Buff[SIMPLEPROFILE_CHAR3_LEN];
+
+static uint8_t TX_Buff_HR[SIMPLEPROFILE_CHAR1_LEN];
+//static uint16_t TX_Buff[SIMPLEPROFILE_CHAR3_LEN];
+
+//static uint16_t TX_Buff16[SIMPLEPROFILE_CHAR3_LEN/2];
+static uint8_t peakIdx = 0;
+static uint16_t avgHR[5];// = 0;
+static unsigned long meanNNSamples = 0;
+//static unsigned long meanNNSamples_tmp = 0;
+static uint16_t totalNN = 0;
+
+static uint16_t NNint_arr[NNint_BUF_SIZE];
+static uint16_t NNint_idx = 0;
+
+static uint8_t hrVars[NUM_HR_VARS];
+static uint8_t HrVarTimerFlag = 0;
+//for test purpose of multiple characteristics (new design approach)
+static uint8_t TX_Buff_char2[SIMPLEPROFILE_CHAR2_LEN];
+
+//static uint16_t Detect_Peak_HR(void);//int,int);
+static uint16_t min(uint16_t ,uint16_t);
+//static void VerifyRR(void);
+//static void SortBuff(uint16_t,uint16_t,uint16_t);//int, int);
+//static int partition(int, int, int);
+//static void Swap(int, int);
+static uint16_t max(uint16_t, uint16_t);
+//static uint16_t incr_i = 0; // incrementing step counter for test purpose only (Android host)
+//static float incr_temp = 30.0; // incrementing temperature counter for test purpose only (Android host)
+//static uint8_t  incr_hr = 30;   // incrementing HR counter for test purpose only (Android host)
+//static uint32 battVol = 100; // battery voltage
+static uint8_t AlarmsTX[SIMPLEPROFILE_CHAR5_LEN];
+
+//static uint16_t pkt_idx = 0;
+//static uint8_t *gapState;
+static uint16_t ecgBuff_wrIdx = 0;
+static uint16_t ecgBuff_rdIdx = 0;
+//static uint16_t ecgTail = 0;
+static uint16_t thermVol=0;
+static uint16_t volDiv=0;
+
+static uint8_t txStatus = 0;
+//static uint8_t lookAhd = 0;
+
+static uint8_t CONNECTED = 0;
+
+static uint8_t magnitudeDelta;
+static uint16_t positionDelta;
+//static uint16_t positionDelta_avg = 0;
+//static uint8_t magnitudeDelta_avg = 0;
+static uint8_t prevHR =0;
+static uint8_t instantHR = 0;
+//static uint8_t sendECG = 0;
+
+//static int sleep_time = 256000; // sleep time in us
+static void uTaskSleep(void);
+//static void controlConn(UArg);
+//static void fnHrVarCalc(UArg);
+static uint8_t DutyToff = 0;
+static uint8_t numTx = 0;
+
+static uint16_t R_Threshold = 0;
+static uint16_t Q_Threshold = 4000;
+//static uint16_t thresCounter = 0;
+//static uint16_t trig_thresCounter =0;
+static uint16_t ecgSamplesCount = 0;
+//static uint8_t SBP_SLEEP = 0;
+static uint8_t oneTimeClkShutDwn = 0;
+
+static uint16_t avgR =0, avgQ =0, avgVpp =0, cntRR =0;
+//static uint8_t HOLD_N_SEND =0;
+static uint8_t FIRST_RESET =0;
+
+
+
+#define HR_VAR_CLOCK_PERIOD 5000 // 5 secs
+#define FIVE_MINUTES    60
+#define ONE_MINUTE      12
+#define TWO_SECONDS     5
+#define ONE_SECOND     2
+#define ABS_MAX_ADC     4095
+#define ABS_MIN_ADC     0
+
+//#define timeLimit(x) (x==0 ? FIVE_MINUTES : ONE_MINUTE )
+#define timeLimit(x) (x==0 ? TWO_SECONDS : ONE_SECOND )
+#define limit(x)    (x==0 ? 1500 : avgVpp)
+
+#define NNSamplesToMilliSecs(x) (2.5*x)
+
+static int TrigHrValCount = 0;
+
+/*
+ * * Duty cycle configuration values:
+ * * ---------------------------------------------
+ * *    value(from Host)    |    Duty Cycle (in %)
+ * * ---------------------------------------------
+ * *    11 - 19             |   10% - 50%
+ * *    21 - 29             |   55% - 95%
+ * *    31                  |   100%
+ * *----------------------------------------------
+ */
+static uint8_t dutyConfig = 31;
+
+static uint16_t lLimitVpp = 150;
+//static uint16_t uLimitVpp = 4000;//1000;
+//static uint16_t uLimitVppCnt = 0;
+
+#define getDelta(x,y) (x>y ? x-y : y-x)
+#define getDutyCycle(x) (((x>10)&&(x<20)) ? (((x%10)*5) + 5) : ((x>20)&&(x<30)) ? (((x%20)*5)+50) : (x==31) ? (((x%30)*5)+95) : 100) // x -> input: dutyConfig
+#define getSleepLimit(x)    (1000 - (10*x))/x // x -> input: duty cycle val
+
+#define TURN_OFF_BLE_ADV_OFF  0
+#define TURN_ON_BLE_ADV_ON  1
+
+
+static uint16_t prev_ecgSamplesCount = 0;
+static long double baseline =0.0; // average of raw ecg values
+volatile uint8_t POTENTIAL_ARTIFACT = 0;
+static uint16_t hrTxPauseTimer = 0;
+
+volatile uint16_t insQ = 0;
+static uint16_t events;
+
+//static uint16_t insVpp =0;
+void scsEvt_Handler(int evt);
+static uint8_t msgFromHost = 0;
+static uint8_t currTxPwrConfig = 0;
+static uint8_t NUM_PEAKS_WAIT_TO_SEND = 1;
+static uint8_t peakCnt_PeakBuff = 0;
+int art = -1;
+void scsEvt_Handler(int evtArg)
+{
+    //Display_print1(dispHandle, 4, 0, "Event_triggered %d", 1);
+    events |= evtArg;
+   // Display_print1(dispHandle, 5, 0, "evtIdx : %d", evtIdx++);
+  //  Semaphore_post(sem);
+}
+
+static uint16_t min(uint16_t x,uint16_t y){
+
+    if(x<y)
+        return x;
+    else
+        return y;
+}
+
+static uint16_t max(uint16_t x, uint16_t y){
+
+    if(x>y){
+        return x;
+    }
+    else
+        return y;
+}
+
+static void resetNNint(uint8_t avgSPM)
+{
+    int i;
+
+    NNint_idx = 0;//totalNN;//0;
+    for (i=0;i<NNint_BUF_SIZE;i++){
+        NNint_arr[i] = 0;
+    }
+    
+}
+static void resetAll()
+{
+    FIRST_RESET = 0;
+    R_Threshold= 0;
+    Q_Threshold = 4000;
+    tempTrigCount = 0;
+    ecgSamplesCount = 0;
+    avgR =0, avgQ =0, avgVpp =0, cntRR =0;
+    meanNNSamples = 0;
+    //meanNNSamples_tmp = 0;
+    totalNN = 0;
+    resetNNint(0);
+   //AK scifTaskData.adcDataStreamer.state.head = 0;
+   //Ak scifTaskData.adcDataStreamer.state.tail = 0;
+    ecgBuff_wrIdx = 0;
+    peakBuff[0].peakVal=0;
+    peakBuff[0].position =0;
+    peakBuff[1].peakVal =0;
+    peakBuff[1].position =0;
+    peakIdx =0;
+    baseline = 0;
+
+}
+static void artifactDetectSet()
+{
+    POTENTIAL_ARTIFACT =1;
+    hrTxPauseTimer = 500; // Number of ECG samples
+    peakIdx = 0;
+    prevHR = 0;
+   // printk("Aritfact\n");
+
+    //scsEvt_Handler(ARTIFACT_TX_EVT);
+
+}
+static void findPeaks()
+{
+//printk("Entry |%d, %d, %d, %d, %d|\n",adcBuff[ecgBuff_wrIdx],adcBuff[ecgBuff_wrIdx - 1],R_Threshold,Q_Threshold,ecgBuff_wrIdx);
+    if((adcBuff[ecgBuff_wrIdx] < adcBuff[ecgBuff_wrIdx - 1]) && (adcBuff[ecgBuff_wrIdx - 1] > (R_Threshold - 150)) &&
+            (adcBuff[ecgBuff_wrIdx - 1] < (R_Threshold + 150)) && ((adcBuff[ecgBuff_wrIdx - 1] - Q_Threshold) >= lLimitVpp) /*&&
+            (getDelta(adcBuff[ecgBuff_wrIdx - 1], insQ) <= limit(FIRST_RESET))*/ && (slope == RISING_SLP || slope == DEFAULT_SLP)) {
+
+
+        slope = FALLING_SLP;
+
+
+      //  if((adcBuff[ecgBuff_wrIdx - 1] - Q_Threshold) < uLimitVpp){
+        //    uLimitVppCnt = 0;
+           // uLimitVpp = (adcBuff[ecgBuff_wrIdx - 1] - Q_Threshold) + 250;
+
+            peakBuff[peakIdx].peakVal = adcBuff[ecgBuff_wrIdx - 1];
+            peakBuff[peakIdx].position = ecgBuff_wrIdx - 1;//ecgSamplesCount;
+
+            if(++peakIdx >= PEAK_BUFFER_SIZE){
+                peakIdx =1;//0; // Most recent previous potential peak is always in index 0
+
+                if(peakBuff[0].position < peakBuff[1].position){
+                    positionDelta = peakBuff[1].position - peakBuff[0].position;//(ECG_BUFFER_SIZE - peakBuff[1].position) + peakBuff[0].position;//abs(peakBuff[0].position - peakBuff[1].position);
+                }
+                else{
+                    positionDelta = (ECG_BUFFER_SIZE - peakBuff[0].position) + peakBuff[1].position;//ECG_BUFFER_SIZE - (peakBuff[0].position - peakBuff[1].position); // ecgBuff_wrIdx has wrapped around the adcBuff
+                }
+
+                magnitudeDelta = getDelta(peakBuff[1].peakVal,peakBuff[0].peakVal);
+                
+                if(positionDelta >= 100 && positionDelta <= 800){//ECG_BUFFER_SIZE){//positionDelta <= (ECG_BUFFER_SIZE - 250) ){
+
+                    if(magnitudeDelta <= 175){//200){//NORMALISE_CONSTANT ){//&& (peakBuff[0].peakVal > 2500 && peakBuff[1].peakVal > 2500)){
+
+
+
+                        instantHR = 24000/positionDelta;
+                        printk("prevHR=|%d||%d||%d|\n",prevHR,instantHR,getDelta(prevHR,instantHR));
+                        printk("peakVals|%d, %d|\n", peakBuff[0].position, peakBuff[1].position);
+                        if(prevHR == 0){
+                            prevHR = instantHR;
+                            peakCnt_PeakBuff++;
+                            NUM_PEAKS_WAIT_TO_SEND = 1;
+                        }
+                        else{
+
+                            if(getDelta(prevHR,instantHR) > 10){
+
+                                printk("delta|%d, %d|\n", peakBuff[0].position, peakBuff[1].position);
+                                artifactDetectSet();
+                            }
+                            else{
+                                prevHR = instantHR;
+                                if(++peakCnt_PeakBuff >= 3){
+                                    peakCnt_PeakBuff =0;
+                                    NUM_PEAKS_WAIT_TO_SEND = 0;
+                                }
+                            }
+                        }
+
+
+                        //if(POTENTIAL_ARTIFACT == 0 && NUM_PEAKS_WAIT_TO_SEND == 0){
+                        prev_ecgSamplesCount = ecgSamplesCount;
+
+                        if(cntRR > 0){
+                            cntRR++;
+                            if(cntRR > 5){
+                                FIRST_RESET = 1;
+                            }
+                            avgR = (avgR*(cntRR-1) + R_Threshold)/cntRR;
+
+                            avgQ = (avgQ*(cntRR -1) + Q_Threshold)/cntRR;
+                            avgVpp = (avgVpp*(cntRR-1) + (R_Threshold -Q_Threshold))/cntRR;
+
+                            if(cntRR >= 65000){
+                                cntRR =0;
+                            }
+                        }
+                        else{
+                            cntRR++;
+                        }
+
+
+
+
+                        avgHR[0] = positionDelta;//(peakBuff[1].position - peakBuff[0].position); //Num of samples between the actual peaks. Always peaBuff[1] > peakBUff[0]
+                        avgHR[1] = peakBuff[1].peakVal;//peakBuff[0].peakVal;
+                        avgHR[2] = peakBuff[0].peakVal;//avgVpp;//R_Threshold;//peakBuff[0].position;
+                        avgHR[3] = avgQ;//Q_Threshold;//peakBuff[1].peakVal;
+                        avgHR[4] = ecgSamplesCount;//
+
+                            //Making peakBuff[0] as most recent peak for next calculation/comparison
+                        peakBuff[0].position = peakBuff[1].position;
+                        peakBuff[0].peakVal = peakBuff[1].peakVal;
+
+                            //Send HR (avgHR) if it changed
+                            //currHR = (1000 * 60)/positionDelta;
+                            /*Calculating the mean number of RR intervals, to be used for long-term(5min) HR variability Calcution */
+                        //printk("potential peak %d %d",POTENTIAL_ARTIFACT,NUM_PEAKS_WAIT_TO_SEND);
+                        if(POTENTIAL_ARTIFACT == 0 && NUM_PEAKS_WAIT_TO_SEND == 0){
+
+
+                            NNint_arr[NNint_idx] = positionDelta;//instantHR;
+                            if(++NNint_idx >= NNint_BUF_SIZE){
+                                NNint_idx =0;
+                            }
+                            
+                            totalNN++;
+                            //printk("totalNN++|%d|",totalNN);
+                            // meanNNSamples = ((totalNN*meanNNSamples) + positionDelta)/(++totalNN);
+/*
+                            meanNNSamples *= totalNN;
+                            meanNNSamples += positionDelta;
+                            meanNNSamples *= 1000;
+                            meanNNSamples /= (++totalNN);
+                            meanNNSamples /= 1000;
+*/
+                            if(totalNN >= 600 || HrVarTimerFlag == 1){
+                                uint8_t avgSPM=0;// = 24000/meanNNSamples;  //average Samples per Minute
+
+                                meanNNSamples = 0;//resetMeanNNSamples(avgSPM);//0;
+                                totalNN = 0;//resetTotalNN(avgSPM);//0;
+
+
+                                if(HrVarTimerFlag == 1){
+                                    resetNNint(avgSPM);
+                                    HrVarTimerFlag = 0;
+                                }
+
+                            }
+
+                        }
+
+
+                        //scsEvt_Handler(TX_HR_EVT);
+                        printk("\nPA: %d, PWTS:%d\n",POTENTIAL_ARTIFACT, NUM_PEAKS_WAIT_TO_SEND);
+						if(POTENTIAL_ARTIFACT == 0 && NUM_PEAKS_WAIT_TO_SEND == 0){
+                		//  SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR1, SIMPLEPROFILE_CHAR1_LEN, TX_Buff_HR); // uncomment
+                        // for(int i =0; i< 5; i++){
+                        //      printk("HR %d\n", avgHR[i]);
+                        // }
+            //adhr
+            printk("\nBPM:%d\n", 24000/avgHR[0]);
+						notifyHR(avgHR, 5);
+            }
+					
+
+                    }
+                    else{
+                    // Noise between peaks
+                    // Lesser magnitude value is the potential peak. Make peakBuff[0] as most recent potential peak
+                        peakBuff[0].position = max(peakBuff[0].position, peakBuff[1].position);
+                        if(peakBuff[0].position == peakBuff[1].position){
+                            peakBuff[0].peakVal = peakBuff[1].peakVal;
+                        }
+                    }
+                }
+                else{
+                //irrelevant for HR, and collect the most recent potential peak
+                    if(ecgSamplesCount - prev_ecgSamplesCount > 800)
+                    {
+                        peakIdx = 0;
+                    }
+                    peakBuff[0].position = min(peakBuff[0].position, peakBuff[1].position);
+                    if(peakBuff[0].position == peakBuff[1].position){
+                        peakBuff[0].peakVal = peakBuff[1].peakVal;
+                    }
+                }
+
+            }
+       /* }
+        else if(++uLimitVppCnt >= 20){
+
+                uLimitVppCnt =0;
+                uLimitVpp += 500;
+                R_Threshold = 0;
+                Q_Threshold = 4000;
+
+
+
+
+        }*/
+
+    }
+    else if((adcBuff[ecgBuff_wrIdx] < adcBuff[ecgBuff_wrIdx - 1]) && (slope == RISING_SLP || slope == DEFAULT_SLP)){
+        slope = FALLING_SLP;
+    }
+    else if(adcBuff[ecgBuff_wrIdx] > adcBuff[ecgBuff_wrIdx - 1] && (slope == FALLING_SLP || slope == DEFAULT_SLP)){
+        slope = RISING_SLP;
+        insQ = adcBuff[ecgBuff_wrIdx - 1];
+    }
+
+
+
+}
+
+
+ void sandeep(int16_t sample){
+	// -- sandeep code --
+	//printk("\n sandeep's code\n");
+
+	     adcBuff[ecgBuff_wrIdx] = sample;
+
+               if(++tempTrigCount >= 2000){ // 5000
+                   tempTrigCount =0;
+                  // HOLD_N_SEND =         1;
+
+
+                   if((R_Threshold > (1.1*avgR) || R_Threshold < (0.9*avgR)) && FIRST_RESET == 1){
+                       R_Threshold = avgR;
+                   }
+                   else{
+                       R_Threshold = 0.95*R_Threshold;//(R_Threshold - Q_Threshold)/2; //0;
+                   }
+                   if((Q_Threshold > (1.1*avgQ) || Q_Threshold < (0.9*avgQ)) && FIRST_RESET == 1) {
+                       Q_Threshold = avgQ;
+                   }
+                   else{
+                       Q_Threshold = 1.05*Q_Threshold;//(R_Threshold - Q_Threshold)/2;//4000;
+                   }
+               }
+
+
+
+               //ecgSamplesCount++;
+               if(++ecgSamplesCount >= 65000){//sizeof(ecgSamplesCount)){
+                   ecgSamplesCount = 0;
+                   FIRST_RESET = 0;
+               }
+
+               if(ecgSamplesCount > 0){
+                    //printk("%f\n",(baseline*(ecgSamplesCount - 1) + adcBuff[ecgBuff_wrIdx])/ecgSamplesCount);
+
+                   //baseline = (baseline*(ecgSamplesCount - 1) + adcBuff[ecgBuff_wrIdx])/ecgSamplesCount;
+                   baseline *= (ecgSamplesCount -1);
+                   //printk("float1 |%Lf|\n",baseline);
+                   baseline += adcBuff[ecgBuff_wrIdx];
+                   //printk("float2 |%Lf|\n",baseline);
+                   baseline /= ecgSamplesCount;
+                  
+
+               }
+
+               if(hrTxPauseTimer > 0){
+                   hrTxPauseTimer--;
+               }
+               else if(POTENTIAL_ARTIFACT){
+
+                   POTENTIAL_ARTIFACT = 0;
+                   //Util_startClock(&HrVarClock);
+               }
+
+               //look for slope change and collect potential peaks
+               if(ecgBuff_wrIdx > 0){ // RAM has atleast two values to compare
+                   //if(++thresCounter <= 1000) {
+                  if(FIRST_RESET == 0){
+                       if(adcBuff[ecgBuff_wrIdx] > R_Threshold && ((adcBuff[ecgBuff_wrIdx] - Q_Threshold) < 1500)) {
+                           R_Threshold = adcBuff[ecgBuff_wrIdx];// - 49500;// - 1000;//NORMALISE_CONSTANT; // 350 is a normalizing constant chosen to be fixed
+
+                       }
+                       else if(adcBuff[ecgBuff_wrIdx] < Q_Threshold && ((R_Threshold - adcBuff[ecgBuff_wrIdx]) < 1500)) {
+                           Q_Threshold = adcBuff[ecgBuff_wrIdx];
+
+                       }
+
+                   }
+                   else{
+                       if(adcBuff[ecgBuff_wrIdx] > R_Threshold && ((adcBuff[ecgBuff_wrIdx] - Q_Threshold) <= 1.2*avgVpp) &&
+                               ((adcBuff[ecgBuff_wrIdx] - Q_Threshold) >= 0.6*avgVpp)) {
+                           R_Threshold = adcBuff[ecgBuff_wrIdx];// - 49500;// - 1000;//NORMALISE_CONSTANT; // 350 is a normalizing constant chosen to be fixed
+
+                       }
+                       else if(adcBuff[ecgBuff_wrIdx] < Q_Threshold && ((R_Threshold - adcBuff[ecgBuff_wrIdx]) <= 1.2*avgVpp) &&
+                               ((R_Threshold - adcBuff[ecgBuff_wrIdx]) >= 0.6*avgVpp)) {
+                           Q_Threshold = adcBuff[ecgBuff_wrIdx];
+
+                       }
+                   }
+                  /*findPeaks() will run potential and real peak detection for all that's filtered in baseline*/
+                  if(FIRST_RESET > 0){
+                      //uint16_t diff = adcBuff[ecgBuff_wrIdx - 1] - (uint16_t)(baseline);
+                      if((adcBuff[ecgBuff_wrIdx - 1] > (uint16_t)(baseline + 100.0))){// || (adcBuff[ecgBuff_wrIdx - 1] < (uint16_t)(baseline - 100.0))){
+                          findPeaks();
+                      }
+                        // changes baseline from 1000 - 1500 for any confusion look into sandeep original code
+                      if((adcBuff[ecgBuff_wrIdx - 1] > (uint16_t)(baseline + 1500.0)) || (adcBuff[ecgBuff_wrIdx - 1] < (uint16_t)(baseline - 1500.0))){
+                        //printk("outoff base|%d, %Lf|\n",adcBuff[ecgBuff_wrIdx - 1],baseline);
+                          artifactDetectSet();
+                      }
+                      //findPeaks();
+                  }
+                  else{
+
+                      if((adcBuff[ecgBuff_wrIdx ] > (ABS_MAX_ADC - 100)) || (adcBuff[ecgBuff_wrIdx] < (ABS_MIN_ADC + 100))){
+                        //printk("below base|%d|\n",adcBuff[ecgBuff_wrIdx - 1]);
+                          artifactDetectSet();
+                      }
+                      else {
+                          findPeaks();
+                      }
+                  }
+
+
+
+               }
+
+            //AK    if (++tail >= SCIF_ADC_DATA_STREAMER_BUFFER_SIZE) {
+            //        tail = 0;
+            //    }
+               if(++ecgBuff_wrIdx >= ECG_BUFFER_SIZE) {
+                   ecgBuff_wrIdx = 0;
+
+               }
+
+	//-------------------
+ }
+ void HRV_parameters(){
+     if(++numTx >= timeLimit(0)){
+                  DutyToff = 1;
+                  numTx = 0;
+              }
+              if(++TrigHrValCount >= timeLimit(oneTimeClkShutDwn)){ // added totalNN condition to avoid divide by zero error(in cases like artifact)--> in future donot call hrvParameter when totalNN ==0
+                // printk("\nInside hrv\n");
+                  TrigHrValCount = 0;
+
+                  HrVarTimerFlag = 1;
+
+                  if(!oneTimeClkShutDwn){
+                      oneTimeClkShutDwn = 1;
+                  }
+
+
+                  hrVars[0] = HR_VAR_PKT_HEADER & 0xFF;
+                  hrVars[1] = (HR_VAR_PKT_HEADER >> 8) & 0xFF;
+
+                  int i;
+                  for(i=0;i<totalNN;i++){
+                      meanNNSamples += NNint_arr[i];
+                  }
+                  printk("totNN|%d| Mean|%d|",totalNN,meanNNSamples);
+                  meanNNSamples /= totalNN;
+                  
+                  hrVars[2] = (uint8_t) meanNNSamples & 0xFF; //AVNN
+                  hrVars[3] = (uint8_t) (meanNNSamples >> 8) & 0xFF;
+
+                  //int i;
+                  uint64_t sdnn = 0, rmssd = 0, pNN50 = 0;
+
+                  for(i=0;i<totalNN;i++){
+
+                      sdnn += pow((unsigned long)NNSamplesToMilliSecs(NNint_arr[i]) - NNSamplesToMilliSecs(meanNNSamples), 2);
+
+                      if(totalNN > 2 && i > 0){
+                          rmssd += (unsigned long) pow(NNSamplesToMilliSecs(NNint_arr[i]) - NNSamplesToMilliSecs(NNint_arr[i-1]), 2);
+                          if(getDelta(NNSamplesToMilliSecs(NNint_arr[i]), NNSamplesToMilliSecs(NNint_arr[i-1])) >= 50){
+                              pNN50++;
+                          }
+                      }
+                  }
+                  sdnn = sqrt(sdnn/ (unsigned long) totalNN); // SDNN
+                  hrVars[4] = (uint8_t) sdnn & 0xFF;
+                  hrVars[5] = (uint8_t) (sdnn >> 8) & 0xFF;
+
+                  if(rmssd){
+                      rmssd = sqrt(rmssd/(unsigned long)totalNN);    // RMSSD
+                      hrVars[6] = (uint8_t) rmssd & 0xFF;
+                      hrVars[7] = (uint8_t) (rmssd >> 8) & 0xFF;
+                  }
+                  if(pNN50){
+                      pNN50 = ((pNN50*1000)/ (unsigned long) totalNN);  //pNN50
+                      hrVars[8] = (uint8_t) pNN50 & 0xFF;
+                      hrVars[9] = (uint8_t) (pNN50 >> 8) & 0xFF;
+                  }
+                  printk("\n-- HRV --\n");
+                  // for(int i =0; i<10; i++){
+                  //   printk("HRV %u, ",hrVars[i]);
+                  // }
+
+                  printk("\t meanNN %ul: \n", meanNNSamples);
+                  printk("\t sdnn %u: \n", sdnn);
+                  printk("\t rmssd %u: \n", rmssd);
+                  printk("\t pnn50 %u: \n", pNN50);
+                  printk("\n---------\n");                 
+                  notifyHRV(hrVars);
+              }
+              
+ }
+ 
+//  int notifyHR(uint16_t hrData[]);
+//  int notifyHRV(uint8_t hrvData[]);
+//  void TX_HRV(){
+// 	uint64_t time_stamp;
+//     int64_t delta_time;
+// 	time_stamp = k_uptime_get();
+// 	if(!k_sem_take(&hrv,K_FOREVER)){
+// 		delta_time = k_uptime_delta(&time_stamp);
+// 		printk("woke after %lld min ",delta_time);
+// 	}
+//  }
+ //K_THREAD_DEFINE(tx_hrv_id, STACKSIZE,TX_HRV,NULL,NULL,NULL,THREAD_HRV,0,0);
+ atomic_t hrv_bit;
+ int32_t temperature=-100, temp=-100;
+const nrfx_rtc_t timer_instance = NRFX_RTC_INSTANCE(2);
+
+static void rtc_handler(nrfx_rtc_int_type_t int_type)
+{
+    nrfx_err_t err;
+	switch (int_type)
+	{
+		case NRFX_RTC_INT_TICK:
+			//printk("tick interrupt received\n");
+			ctick++;
+			
+		end_time_tick = k_uptime_get();
+					
+					start_time = end_time_tick;
+		
+			break;
+		case NRFX_RTC_INT_COMPARE0:
+		{
+			//printk("compare 0 event received\n");
+			nrfx_rtc_counter_clear(&timer_instance);
+			//err = nrfx_rtc_cc_set(&timer_instance, 0, 1, true);
+			// if(err!=NRFX_SUCCESS)
+			// {
+			// 	printk(" compare channel initialization error %d",err);
+			// }
+            if(cInt == 0)start_time_int = k_uptime_get();
+						cInt++;
+                        /*
+                        cInt == 2000 for 5 Second hrv timer as prescaler = 400 => 400 * 2000 = 5s
+                        cInt == 640 for 5 Second hrv timer as prescaler = 128 => 128 * 640 = 5s
+                        */ 
+
+                        if(cInt == 640){ 
+                            end_time = k_uptime_get();
+                            //printk("cint %lld\n",end_time-start_time_int);
+                            //k_sem_give(&hrv);
+                            cInt = 0;
+                            hrv_set = 1;
+			            }
+				
+			if(cInt % 1 ==0){
+					// end_time_int = timing_counter_get();
+					// total_cycles_int = timing_cycles_get(&start_time, &end_time_int);
+    				// total_ns_int = timing_cycles_to_ns(total_cycles_int);
+					//printk( " |%d interrupt %lld, %d| ",cInt,total_ns_int,cBuf.end);
+			}
+            break;
+		}
+		default:
+			printk("rtc interrupt %d\n", int_type);
+			break;
+	}
+}
+
+static void configure_RTC(void)
+{
+    nrfx_err_t err;
+
+    /* STEP 4.3 - Declaring timer config and intialize nrfx_timer instance. */
+    nrfx_rtc_config_t timer_config = NRFX_RTC_DEFAULT_CONFIG;
+	printk("before Prescaler value = %d",timer_config.prescaler);
+    timer_config.prescaler = NRF_RTC_FREQ_TO_PRESCALER(128);
+	printk("Prescaler value = %d",timer_config.prescaler);
+
+    IRQ_CONNECT(DT_IRQN(DT_NODELABEL(rtc2)),
+                DT_IRQ(DT_NODELABEL(rtc2), priority),
+                nrfx_rtc_2_irq_handler, NULL, 0);  
+
+    err = nrfx_rtc_init(&timer_instance, &timer_config, rtc_handler );
+
+    if (err != NRFX_SUCCESS) {
+        LOG_ERR("nrfx_timer_init error: %08x", err);
+        return;
+    }
+     nrfx_rtc_tick_enable(&timer_instance, true);
+	 err = nrfx_rtc_cc_set(&timer_instance, 0, 1, true);
+	
+	start_time = k_uptime_get();
+	start_time_tick = start_time;
+    /* STEP 4.4 - Set compare channel 0 to generate event every SAADC_SAMPLE_INTERVAL_US. */
+    // err = nrfx_rtc_cc_set(&timer_instance, 0, 1, true);
+    // if(err!=NRFX_SUCCESS)
+    // {
+    //  printk(" compare channel initialization error %d",err);
+    // }
+    nrfx_rtc_enable(&timer_instance);
+
+}
+
+
+
+
+//--------------------------------------
 #define NRFX_LOG_MODULE                 EXAMPLE
 #define NRFX_EXAMPLE_CONFIG_LOG_ENABLED 1
 #define NRFX_EXAMPLE_CONFIG_LOG_LEVEL   3
@@ -123,11 +890,9 @@ void writeRegister(enum Registers_e reg, const uint32_t data)
 	m_tx_buffer[2] = ((0x0000FF00 & data) >> 8);
 	m_tx_buffer[3] = ( 0x000000FF & data);
     nrfx_spim_xfer_desc_t spim_xfer_desc = NRFX_SPIM_XFER_TRX(m_tx_buffer, sizeof(m_tx_buffer), m_rx_buffer, sizeof(m_rx_buffer));
-    gpio_pin_set_dt(&intB_gpio_pin_time, 1);
-    nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
+    gpio_pin_set_dt(&intB_gpio_pin_time, 1);    nrfx_spim_xfer(&spim_inst, &spim_xfer_desc, 0);
     
-    spin();
-    gpio_pin_set_dt(&intB_gpio_pin_time, 0);
+    spin();    gpio_pin_set_dt(&intB_gpio_pin_time, 0);
     k_msleep(100);
     printk("\n");
 }
@@ -478,8 +1243,14 @@ int main(void)
                     notifyECG(ecgSample, sampleLen);
                     // printk("size: %d\n",sampleLen);  
                     for( idx = 0; idx < sampleLen; idx++ ) {
-                          printk("%6d\n", ecgSample[idx]);           
+                        //   printk("%6d\n", ecgSample[idx]); 
+                          sandeep(ecgSample[idx]);          
                     }
+                     if(hrv_set){
+                HRV_parameters();
+                // printk("done sending");
+                hrv_set=0;
+            }
 				}               
         	}            
         } 

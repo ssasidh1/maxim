@@ -24,12 +24,18 @@ extern "C" {
 	BT_UUID_128_ENCODE(0x00001523, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
 
 /** @brief Button Characteristic UUID. */
+#define BT_UUID_HRV_VAL \
+	BT_UUID_128_ENCODE(0x00001524, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
+#define BT_UUID_HR_VAL \
+	BT_UUID_128_ENCODE(0x00001525, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
 #define BT_UUID_ECG_VAL \
 	BT_UUID_128_ENCODE(0x00001526, 0x1212, 0xefde, 0x1523, 0x785feabcd123)
 
 
 #define BT_UUID_LBS           BT_UUID_DECLARE_128(BT_UUID_LBS_VAL)
 #define BT_UUID_ECG    BT_UUID_DECLARE_128(BT_UUID_ECG_VAL)
+#define BT_UUID_HR    BT_UUID_DECLARE_128(BT_UUID_HR_VAL)
+#define BT_UUID_HRV       BT_UUID_DECLARE_128(BT_UUID_HRV_VAL)
 
 /** @brief Callback type for when an LED state change is received. */
 typedef void (*led_cb_t)(const bool led_state);
@@ -89,4 +95,4 @@ extern volatile int cN;
  * @}
  */
 
-#endif /* BT_LBS_H_ */
+#endif 
