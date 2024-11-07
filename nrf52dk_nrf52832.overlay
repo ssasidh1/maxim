@@ -1,0 +1,58 @@
+#include "../../../common/common-pinctrl.dtsi"
+
+
+/{
+
+    gpiocustom {
+        compatible = "gpio-keys" ;
+        gpiocust1: gpio_1 {
+            gpios = <&gpio0 2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = " csutom pin 2";
+        };
+        gpiocust2: gpio_2 {
+            gpios = <&gpio0 28 ( GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = " csutom pin 28";
+        };
+     
+		// gpiocust3: gpio_3 {
+        //     gpios = <&gpio0 3 ( GPIO_PULL_UP)>;
+        //     label = " MOSI";
+        // };
+		// gpiocust4: gpio_4 {
+        //     gpios = <&gpio0 31 (  GPIO_PULL_UP)>;
+        //     label = " MISO";
+        // };
+		
+
+     };
+};
+
+&i2c0 {	status = "disabled";};
+&spi0 {	status = "okay";};
+&i2c1 {	status = "disabled";};
+
+&spi1 {
+    status = "disabled";
+    compatible = "nordic,nrf-spim";
+    pinctrl-0 = <&spi1_default>;
+	pinctrl-1 = <&spi1_sleep>;
+};
+
+&pinctrl {
+	// spi1_default: spi1_default {
+	// 	group1 {
+	// 			psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
+	// 					<NRF_PSEL(SPIM_MOSI, 0, 6)>,
+	// 					<NRF_PSEL(SPIM_MISO, 0, 7)>;
+	// 	};
+	// };
+
+	// spi1_sleep: spi1_sleep {
+	// 	group1 {
+	// 			psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
+	// 					<NRF_PSEL(SPIM_MOSI, 0, 6)>,
+	// 					<NRF_PSEL(SPIM_MISO, 0, 7)>;
+	// 			low-power-enable;
+	// 	};
+	// };
+};

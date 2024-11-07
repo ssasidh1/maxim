@@ -982,7 +982,7 @@ arduino_spi: &spi2 {
  };
 };
 # 0 "<command-line>" 2
-# 1 "C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay" 1
+# 1 "c:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay" 1
 # 1 "c:\\ncs\\v2.6.1\\modules\\hal\\nordic\\nrfx\\samples\\common\\common-pinctrl.dtsi" 1
 # 25 "c:\\ncs\\v2.6.1\\modules\\hal\\nordic\\nrfx\\samples\\common\\common-pinctrl.dtsi"
 &pinctrl {
@@ -1024,7 +1024,7 @@ arduino_spi: &spi2 {
         };
     };
 };
-# 2 "C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay" 2
+# 2 "c:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay" 2
 
 
 /{
@@ -1039,7 +1039,7 @@ arduino_spi: &spi2 {
             gpios = <&gpio0 28 ( (1 << 0) | (1 << 4))>;
             label = " csutom pin 28";
         };
-# 27 "C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay"
+# 27 "c:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay"
      };
 };
 
@@ -1055,83 +1055,7 @@ arduino_spi: &spi2 {
 };
 
 &pinctrl {
-# 58 "C:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay"
-};
-# 0 "<command-line>" 2
-# 1 "./../boards/nrf52dk_nrf52832.overlay" 1
-# 1 "./../boards/../../../common/common-pinctrl.dtsi" 1
-# 25 "./../boards/../../../common/common-pinctrl.dtsi"
-&pinctrl {
-    spi_dummy: spi_dummy {
-        group1 {
-            psels = <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((4U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((6U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((5U & 0xFFFFU) << 16U))>;
-        };
-    };
-
-    spi_master_default: spi_master_default {
-        group1 {
-            psels = <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((4U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((6U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((5U & 0xFFFFU) << 16U))>;
-        };
-    };
-
-    spi_slave_dummy: spi_slave_dummy {
-        group1 {
-            psels = <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((4U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((6U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((5U & 0xFFFFU) << 16U))>;
-        };
-    };
-
-    i2c_master_dummy: i2c_master_dummy {
-        group1 {
-            psels = <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((12U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((11U & 0xFFFFU) << 16U))>;
-        };
-    };
-
-    i2c_slave_dummy: i2c_slave_dummy {
-        group1 {
-            psels = <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((12U & 0xFFFFU) << 16U))>,
-                <((((((0) * 32U) + (0)) & 0x7FU) << 0U) | ((11U & 0xFFFFU) << 16U))>;
-        };
-    };
-};
-# 2 "./../boards/nrf52dk_nrf52832.overlay" 2
-
-
-/{
-
-    gpiocustom {
-        compatible = "gpio-keys" ;
-        gpiocust1: gpio_1 {
-            gpios = <&gpio0 2 ((1 << 0) | (1 << 4))>;
-            label = " csutom pin 2";
-        };
-        gpiocust2: gpio_2 {
-            gpios = <&gpio0 28 ( (1 << 0) | (1 << 4))>;
-            label = " csutom pin 28";
-        };
-# 27 "./../boards/nrf52dk_nrf52832.overlay"
-     };
-};
-
-&i2c0 { status = "disabled";};
-&spi0 { status = "okay";};
-&i2c1 { status = "disabled";};
-
-&spi1 {
-    status = "disabled";
-    compatible = "nordic,nrf-spim";
-    pinctrl-0 = <&spi1_default>;
- pinctrl-1 = <&spi1_sleep>;
-};
-
-&pinctrl {
-# 58 "./../boards/nrf52dk_nrf52832.overlay"
+# 58 "c:/ncs/v2.6.1/modules/hal/nordic/nrfx/samples/src/nrfx_spim/boards/nrf52dk_nrf52832.overlay"
 };
 # 0 "<command-line>" 2
 # 1 "C:/ncs/v2.6.1/zephyr/misc/empty_file.c"
